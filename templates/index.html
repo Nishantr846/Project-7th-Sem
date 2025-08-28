@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Symptom Checker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
+    <style>
+        /* Custom styles to improve the look of tom-select with Tailwind */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .ts-control {
+            background-color: #ffffff;
+            border-color: #d1d5db;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        }
+        .ts-control:focus-within {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgb(79 70 229 / 0.2);
+        }
+        .ts-dropdown { border-color: #d1d5db; border-radius: 0.5rem; }
+        .ts-dropdown .option { padding: 0.5rem 1rem; }
+        .ts-dropdown .option.active { background-color: #4f46e5; color: white; }
+        .ts-control .item { background-color: #4f46e5; color: white; border-radius: 0.375rem; padding: 0.25rem 0.5rem; }
+
+        /* */
+        #results-section {
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
+
+    <div class="container mx-auto px-4 py-8 md:py-16 max-w-3xl flex-grow">
+
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold text-indigo-600 mb-2">AI Symptom Checker</h1>
+            <p class="text-lg text-gray-600">Enter your symptoms for a preliminary analysis.</p>
+        </header>
+
+        <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded-md mb-8 shadow-sm" role="alert">
+            <p class="font-bold">Disclaimer</p>
+            <p>This tool provides an analysis for informational purposes only and is not a substitute for professional medical advice. Always consult a qualified healthcare provider.</p>
+        </div>
+
+        <main class="bg-white p-6 md:p-8 rounded-xl shadow-lg">
+            <div id="symptom-form">
+                <div class="mb-6">
+                    <label for="symptoms-select" class="block mb-2 text-lg font-medium text-gray-700">Select Your Symptoms</label>
+                    <p class="text-sm text-gray-500 mb-3">You can type to search and select multiple symptoms.</p>
+                    <select id="symptoms-select" multiple>
+                        {% for symptom in symptoms %}
+                        <option value="{{ symptom.value }}">{{ symptom.display }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="flex flex-col md:flex-row justify-center items-center gap-4">
+                    <button id="diagnose-btn" class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-indigo-300 flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7 2a1 1 0 00-.707 1.707L8.586 6H6a2 2 0 00-2 2v6a2 2 0 002 2h8a2 2 0 002-2V8a2 2 0 00-2-2h-2.586l2.293-2.293A1 1 0 1013.293.293L10 3.586 6.707.293A1 1 0 007 2zM6 8h8v6H6V8z" clip-rule="evenodd" /></svg>
+                        <span id="btn-text">Run Diagnosis</span>
+                        <div id="spinner" class="hidden animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    </button>
+                    <button id="reset-btn" class="w-full md:w-auto bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-6 rounded-lg transition-colors">
+                        Reset
+                    </button>
+                </div>
+
+            </div>
+        </main>
+
+        <section id="results-section" class="hidden opacity-0 mt-8 bg-white p-6 md:p-8 rounded-xl shadow-lg border-t-4 border-indigo-500">
+            <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">Analysis Results</h2>
+            <div class="space-y-4 text-lg">
+                <div class="flex flex-col md:flex-row items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <span class="font-semibold text-gray-600">Predicted Condition:</span>
+                    <span id="predicted-disease" class="font-bold text-indigo-600 text-xl"></span>
+                </div>
+                <div class="flex flex-col md:flex-row items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <span class="font-semibold text-gray-600">Recommended Specialist:</span>
+                    <span id="recommended-specialty" class="font-bold text-indigo-600 text-xl"></span>
+                </div>
+            </div>
+            <p class="text-center mt-6 text-sm text-gray-500">Please discuss these results with a healthcare professional.</p>
+        </section>
+
+        <section id="error-section" class="hidden mt-8 bg-red-100 p-4 rounded-lg text-red-700 text-center">
+            <p id="error-message"></p>
+        </section>
+
+    </div>
+    
+    <footer class="bg-white text-center py-4 border-t">
+        <p class="text-gray-500 text-sm">&copy; 2025 AI Symptom Checker. All Rights Reserved.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const symptomSelect = new TomSelect('#symptoms-select', {
+                plugins: ['remove_button'],
+                create: false,
+                placeholder: 'Start typing to search for symptoms...'
+            });
+
+            const diagnoseBtn = document.getElementById('diagnose-btn');
+            const resetBtn = document.getElementById('reset-btn'); // <-- NEW
+            const btnText = document.getElementById('btn-text');
+            const spinner = document.getElementById('spinner');
+            const resultsSection = document.getElementById('results-section');
+            const errorSection = document.getElementById('error-section');
+            const errorMessage = document.getElementById('error-message');
+            const predictedDiseaseEl = document.getElementById('predicted-disease');
+            const recommendedSpecialtyEl = document.getElementById('recommended-specialty');
+
+            // --- NEW: Reset button functionality ---
+            resetBtn.addEventListener('click', () => {
+                symptomSelect.clear(); // Clears all selected symptoms
+                resultsSection.classList.add('hidden', 'opacity-0'); // Hides results
+                errorSection.classList.add('hidden'); // Hides errors
+            });
+
+            diagnoseBtn.addEventListener('click', async () => {
+                const selectedSymptoms = symptomSelect.getValue();
+
+                resultsSection.classList.add('hidden', 'opacity-0');
+                errorSection.classList.add('hidden');
+
+                if (selectedSymptoms.length === 0) {
+                    errorMessage.textContent = 'Please select at least one symptom.';
+                    errorSection.classList.remove('hidden');
+                    return;
+                }
+
+                btnText.classList.add('hidden');
+                spinner.classList.remove('hidden');
+                diagnoseBtn.disabled = true;
+                resetBtn.disabled = true; // <-- NEW: Disable reset during diagnosis
+
+                try {
+                    const response = await fetch('/predict', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ symptoms: selectedSymptoms }),
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    predictedDiseaseEl.textContent = data.predicted_disease;
+                    recommendedSpecialtyEl.textContent = data.recommended_specialty;
+                    
+                    // --- MODIFIED: Show results with animation ---
+                    resultsSection.classList.remove('hidden');
+                    setTimeout(() => resultsSection.classList.remove('opacity-0'), 10); // Start fade-in
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    errorMessage.textContent = `An error occurred: ${error.message}. Please try again.`;
+                    errorSection.classList.remove('hidden');
+                } finally {
+                    btnText.classList.remove('hidden');
+                    spinner.classList.add('hidden');
+                    diagnoseBtn.disabled = false;
+                    resetBtn.disabled = false; // <-- NEW: Re-enable reset button
+                }
+            });
+        });
+    </script>
+</body>
+</html>
